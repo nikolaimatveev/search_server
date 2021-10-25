@@ -1,7 +1,3 @@
-
-#include <cmath>
-#include <utility>
-
 #include "search_server.h"
 #include "string_processing.h"
 
@@ -11,7 +7,7 @@ SearchServer::SearchServer(const std::string& stop_words_text)
 {
 }
 
-SearchServer::SearchServer(const std::string_view stop_words_text)
+SearchServer::SearchServer(std::string_view stop_words_text)
     : SearchServer(SplitIntoWords(std::string(stop_words_text)))
 {
 }
@@ -24,7 +20,7 @@ void SearchServer::AddDocument(int document_id, std::string_view document, Docum
 
     const double inv_word_count = 1.0 / words.size();
     for (const std::string& word : words) {
-        auto [it,_] = source_words_.emplace(word);
+        const auto [it,_] = source_words_.emplace(word);
         word_to_document_freqs_[*it][document_id] += inv_word_count;
         documents_to_word_freqs_[document_id][*it] += inv_word_count;
     }
@@ -127,17 +123,20 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(std::string_view text) cons
 
 SearchServer::Query SearchServer::ParseQuery(std::string_view text) const {
     Query result;
+    std::set<std::string_view> minus_words;
+    
     for (std::string_view word : SplitIntoWords(text)) {
         const auto query_word = ParseQueryWord(word);
         if (!query_word.is_stop) {
             if (query_word.is_minus) {
-                result.minus_words.insert(query_word.data);
+                minus_words.insert(query_word.data);
             }
             else {
                 result.plus_words.insert(query_word.data);
             }
         }
     }
+    result.minus_words = std::vector<std::string_view>(minus_words.begin(), minus_words.end());
     return result;
 }
 
